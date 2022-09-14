@@ -26,21 +26,77 @@ class Array:
         """
 
         # Check if the values are of valid types
+        if isinstance(values[0], (int, float, bool)):
+            datatype = type(values[0])
+        else:
+            raise TypeError("values parameters must be int, float or boolean")
+        for value in values:
+            if type(value) != datatype:
+                raise ValueError("Values must be of same type")
+
+        if isinstance(shape, tuple) and all(isinstance(n, int) for n in shape):
+            self.shape = shape
+        else:
+            raise TypeError("Shape must be a tuple of ints")
 
         # Check that the amount of values corresponds to the shape
+        self.dim = len(shape)
+
+        if self.dim == 1:
+            elementCap = shape[0]
+        else:
+            elementCap = shape[0] * shape[1]
+        if elementCap != len(values):
+            raise ValueError("Number of values do not fit with shape")
+
 
         # Set instance attributes
+        self.values = values
 
-        pass
+    #Return element in array at index of argument key (int)
+    def __getitem__(self, key):
+        if self.dim == 1:
+            return self.values[key]
+        else:
+            return self.values[self.shape[1] * key]
+
+
 
     def __str__(self):
         """Returns a nicely printable string representation of the array.
 
         Returns:
-            str: A string representation of the array.
+            stringOut: A string representation of the array.
 
         """
-        pass
+        stringOut = "["
+        if self.dim == 1: #1d
+            for i in range(len(self.values)):
+                stringOut += str(self.values[i])
+                if (i != len(self.values) - 1):
+                    stringOut += ", "
+                else:
+                    stringOut += "]"
+        else: #2d
+            rows = self.shape[0]
+            columns = self.shape[1]
+            index = 0 #to iterate on correct index in 2d array
+            for i in range(rows):
+                stringOut += "["
+                for j in range(columns):
+                    stringOut += str(self.values[j + index])
+                    if (j != columns - 1):
+                        stringOut += ", "
+                index += columns
+                stringOut += "]"
+
+                if(i != rows -1):
+                    #stringOut += ", "
+                    stringOut += "\n"
+                else:
+                    stringOut += "]"
+        return stringOut
+
 
     def __add__(self, other):
         """Element-wise adds Array with another Array or number.
@@ -58,8 +114,30 @@ class Array:
 
         # check that the method supports the given arguments (check for data type and shape of array)
         # if the array is a boolean you should return NotImplemented
+        if isinstance(other, Array):
+            if self.shape != other.shape:
+                return ValueError("Shapes of arrays do not match")
+            if type(self.values[0]) != type(other.values[0]): #we know if the first elements have matching datatypes, all else also match
+                raise TypeError("Datatypes of arrays do not match")
+            else:
+                outTuple = ()
+                for i in range(len((self.values))):
+                    sum = self.values[i] + other.values[i]
+                    outTuple += (sum,)
 
-        pass
+                return Array(self.shape, *outTuple)
+
+        elif isinstance(other, (int, float)):
+            outTuple = () #tuple to fill new list
+            for i in range(len(self.values)):
+                sum = self.values[i] + other
+                outTuple += (sum,)
+
+            return Array(self.shape, *outTuple)
+
+        else:
+            return NotImplemented
+
 
     def __radd__(self, other):
         """Element-wise adds Array with another Array or number.
@@ -74,7 +152,7 @@ class Array:
             Array: the sum as a new array.
 
         """
-        pass
+        return self.__add__(other)
 
     def __sub__(self, other):
         """Element-wise subtracts an Array or number from this Array.
@@ -89,7 +167,29 @@ class Array:
             Array: the difference as a new array.
 
         """
-        pass
+        if isinstance(other, Array):
+            if self.shape != other.shape:
+                return ValueError("Shapes of arrays do not match")
+            if type(self.values[0]) != type(other.values[0]): #we know if the first elements have matching datatypes, all else also match
+                raise TypeError("Datatypes of arrays do not match")
+            else:
+                outTuple = ()
+                for i in range(len((self.values))):
+                    diff = self.values[i] - other.values[i]
+                    outTuple += (diff,)
+
+                return Array(self.shape, *outTuple)
+
+        elif isinstance(other, (int, float)):
+            outTuple = () #tuple to fill new list
+            for i in range(len(self.values)):
+                diff = self.values[i] - other
+                outTuple += (diff,)
+
+            return Array(self.shape, *outTuple)
+
+        else:
+            return NotImplemented
 
     def __rsub__(self, other):
         """Element-wise subtracts this Array from a number or Array.
@@ -104,7 +204,7 @@ class Array:
             Array: the difference as a new array.
 
         """
-        pass
+        return self.__sub__(other)
 
     def __mul__(self, other):
         """Element-wise multiplies this Array with a number or array.
@@ -119,7 +219,29 @@ class Array:
             Array: a new array with every element multiplied with `other`.
 
         """
-        pass
+        if isinstance(other, Array):
+            if self.shape != other.shape:
+                return ValueError("Shapes of arrays do not match")
+            if type(self.values[0]) != type(other.values[0]): #we know if the first elements have matching datatypes, all else also match
+                raise TypeError("Datatypes of arrays do not match")
+            else:
+                outTuple = ()
+                for i in range(len(self.values)):
+                    product = self.values[i] * other.values[i]
+                    outTuple += (product,)
+
+                return Array(self.shape, *outTuple)
+
+        elif isinstance(other, (int, float)):
+            outTuple = () #tuple to fill new list
+            for i in range(len(self.values)):
+                product = self.values[i] * other
+                outTuple += (product,)
+
+            return Array(self.shape, *outTuple)
+
+        else:
+            return NotImplemented
 
     def __rmul__(self, other):
         """Element-wise multiplies this Array with a number or array.
@@ -134,7 +256,6 @@ class Array:
             Array: a new array with every element multiplied with `other`.
 
         """
-        # Hint: this solution/logic applies for all r-methods
         return self.__mul__(other)
 
     def __eq__(self, other):
@@ -150,7 +271,18 @@ class Array:
             bool: True if the two arrays are equal (identical). False otherwise.
 
         """
-        pass
+        if isinstance(other, Array):
+            if self.shape != other.shape:
+                return False
+
+            for i in range(len(self.values)):
+                if(self.values[i] != other.values[i]):
+                    return False
+
+            return True
+        else:
+            return False
+
 
     def is_equal(self, other):
         """Compares an Array element-wise with another Array or number.
@@ -170,8 +302,22 @@ class Array:
             ValueError: if the shape of self and other are not equal.
 
         """
+        outTuple = ()
+        if isinstance(other, Array):
+            if self.shape != other.shape:
+                raise ValueError("Parameter is array with non matching shape")
+            else:
+                for i in range(len(self.values)):
+                    outBool = self.values[i] == other.values[i]
+                    outTuple += (outBool,)
+        elif isinstance(other, (int, float)):
+            for i in range(len(self.values)):
+                outBool = self.values[i] == other
+                outTuple += (outBool,)
+        else:
+            raise TypeError("parameter must be an array or number")
 
-        pass
+        return Array(self.shape, *outTuple)
 
     def min_element(self):
         """Returns the smallest value of the array.
@@ -183,7 +329,14 @@ class Array:
 
         """
 
-        pass
+        if isinstance(self.values[0], (int, float)):
+            min = self.values[0]
+            for i in self.values:
+                if (i < min):
+                    min = i
+            return float(min)
+        else:
+            raise TypeError("Array must contain numeric elements")
 
     def mean_element(self):
         """Returns the mean value of an array
@@ -194,4 +347,11 @@ class Array:
             float: the mean value
         """
 
-        pass
+        if isinstance(self.values[0], (int, float)):
+            sum = 0
+            for i in self.values:
+                sum += i
+
+            return float(sum / len(self.values))
+        else:
+            raise TypeError("Array must contain numeric elements")
