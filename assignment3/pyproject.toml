@@ -1,0 +1,26 @@
+[build-system]
+requires = [
+    "setuptools",
+    #4110 only:
+    # "cython",
+    # "numpy==1.21.*",
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+version = "0.1.0"
+requires-python = ">=3.7"
+license = {text = "MIT License"}
+name = "instapy"
+description = "Grayscale and sepia filters for pictures"
+readme = "README.md"
+dependencies = [
+"numpy",
+"numba",
+"pillow",
+"line-profiler",
+]
+
+
+[project.scripts]
+instapy = "instapy.cli:main"
