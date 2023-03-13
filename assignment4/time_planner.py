@@ -23,7 +23,6 @@ event_types = {
 def time_plan(url: str) -> str:
     """Parses table from html text and extract desired information
     and saves in betting slip markdown file
-
     arguments:
         url (str) : URL for page with calendar table
     return:
@@ -47,7 +46,6 @@ def time_plan(url: str) -> str:
 @dataclass
 class TableEntry:
     """Data class representing a single entry in a table
-
     Records text content, rowspan, and colspan attributes
     """
 
@@ -71,18 +69,20 @@ def extract_events(table: bs4.element.Tag) -> pd.DataFrame:
     row_len = len(labels)
 
     # Extracts the data in table, keeping track of colspan and rowspan
-    table_rows = table.findall('tr')
+    table_rows = table.find_all('tr')
     rows = []
-    
 
+    table_rows = table_rows[1:]
     for tr in table_rows:
         cells = tr.find_all("td")
         row = []
-        j = 0
         for cell in cells:
-            colspan = int(td.attrs['colspan'])
-            rowspan = int(td.attrs['rowspan'])
-            text = cell.text
+            colspan = int(cell.get("colspan", 1))
+            rowspan = int(cell.get("rowspan", 1))
+            unwanted = cell.find('sub')
+            if (unwanted):  # remove numbers on type
+                unwanted.extract()
+            text = cell.get_text(strip=True)
             row.append(
                 TableEntry(
                     text=text,
@@ -105,14 +105,13 @@ def extract_events(table: bs4.element.Tag) -> pd.DataFrame:
 
     # Filter data and create pandas dataframe
     filtered_data = filter_data(labels, all_data, wanted)
-    df = ...
+    df = pd.DataFrame(filtered_data, columns=wanted)
 
     return df
 
 
 def render_schedule(data: pd.DataFrame) -> str:
     """Render the schedule data to markdown
-
     arguments:
         data (DataFrame) : DataFrame containing table to write
     return:
@@ -121,20 +120,19 @@ def render_schedule(data: pd.DataFrame) -> str:
 
     def expand_event_type(type_key):
         """Expand event type key (SL) to full name (Slalom)
-
         Useful with pandas Series.apply
         """
         return event_types.get(type_key[:2], type_key)
 
-    ...
+    data['Type'] = data['Type'].apply(expand_event_type)
+    return data.to_markdown()
+
 
 
 def strip_text(text: str) -> str:
     """Gets rid of cruft from table cells, footnotes and setting limit to 20 chars
-
     It is not required to use this function,
     but it may be useful.
-
     arguments:
         text (str) : string to fix
     return:
@@ -148,10 +146,8 @@ def strip_text(text: str) -> str:
 
 def filter_data(keys: list, data: list, wanted: list):
     """Filters away the columns not specified in wanted argument
-
     It is not required to use this function,
     but it may be useful.
-
     arguments:
         keys (list of strings) : list of all column names
         data (list of lists) : data with rows and columns
@@ -161,23 +157,29 @@ def filter_data(keys: list, data: list, wanted: list):
             This is the subset of data in `data`,
             after discarding the columns not in `wanted`.
     """
-    ...
+    filteredData = []
+
+    for r, row in enumerate(data):
+        filteredRow = []
+        for c, column in enumerate(row):
+            if keys[c] in wanted:
+                filteredRow.append(column)
+
+        filteredData.append(filteredRow)
+
+    return filteredData
 
 
 def expand_row_col_span(data):
     """Applies row/colspan to tabular data
-
     It is not required to use this function,
     but it may be useful.
-
     - Copies cells with colspan to columns to the right
     - Copies cells with rowspan to rows below
     - Returns raw data (removing TableEntry wrapper)
-
     arguments:
         data_table (list) : data with rows and cols
             Table of the form:
-
             [
                 [ # row
                     TableEntry(text='text', rowspan=2, colspan=1),
@@ -192,7 +194,6 @@ def expand_row_col_span(data):
                     ...
                 ]
             ]
-
             This should be a dense matrix (list of lists) of data,
             where all rows have the same length,
             and all values are `str`.

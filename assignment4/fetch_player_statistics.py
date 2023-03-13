@@ -24,10 +24,8 @@ base_url = "https://en.wikipedia.org"
 
 def find_best_players(url: str) -> None:
     """Find the best players in the semifinals of the nba.
-
     This is the top 3 scorers from every team in semifinals.
     Displays plot over points, assists, rebounds
-
     arguments:
         - html (str) : html string from wiki basketball
     returns:
@@ -46,12 +44,11 @@ def find_best_players(url: str) -> None:
     # using get_player_stats
 
     for team, players in all_players.items():
-        print(team)
+        #print(team)
         for player in all_players[team]:
-            player["url"] = "http://" + player["url"]
             player_stats = get_player_stats(player["url"], team)
             player.update(player_stats)
-            print(player)
+            #print(player)
 
 
     # at this point, we should have a dict of the form:
@@ -73,20 +70,20 @@ def find_best_players(url: str) -> None:
     best_apg = all_players
     best_rpg = all_players
     top_stat = [
-    "ppg",
-    "apg",
-    "rpg"
+    "points",
+    "assists",
+    "rebounds"
     ]
 #sort after best players
     for stat in top_stat:
-        if stat == "ppg":
+        if stat == "points":
             for team, players in best_ppg.items():
                 best_ppg[team].sort(reverse = True, key=sortPPG)
-        if stat == "apg":
+        if stat == "assists":
             for team, players in best_apg.items():
                 best_apg[team].sort(reverse = True, key=sortAPG)
 
-        if stat == "rpg":
+        if stat == "rebounds":
             for team, players in best_rpg.items():
                 best_rpg[team].sort(reverse = True, key=sortRPG)
 
@@ -110,18 +107,16 @@ def find_best_players(url: str) -> None:
             best_rpg[team3].pop()
 
 
-    plot_best(best_ppg, "ppg")
-    plot_best(best_apg, "apg")
-    plot_best(best_rpg, "rpg")
+    plot_best(best_ppg, "points")
+    plot_best(best_apg, "assists")
+    plot_best(best_rpg, "rebounds")
 
 
 def plot_best(best: Dict[str, List[Dict]], stat: str = "points") -> None:
     """Plots a single stat for the top 3 players from every team.
-
     Arguments:
         best (dict) : dict with the top 3 players from every team
             has the form:
-
             {
                 "team name": [
                     {
@@ -131,13 +126,11 @@ def plot_best(best: Dict[str, List[Dict]], stat: str = "points") -> None:
                     },
                 ],
             }
-
             where the _keys_ are the team name,
             and the _values_ are lists of length 3,
             containing dictionaries about each player,
             with their name and stats.
-
-        stat (str) : [points | assists | rebounds] which stat to plot.
+        stat (str) : [points | assists | rebounds] which stat to plot.
             Should be a key in the player info dictionary.
     """
     colors = {
@@ -174,25 +167,22 @@ def plot_best(best: Dict[str, List[Dict]], stat: str = "points") -> None:
     plt.xticks(range(len(all_names)), all_names, rotation = 90)
     plt.legend(bbox_to_anchor = (1.05, 0.6))
 
-    if stat == "ppg":
+    if stat == "points":
         plt.title("Points per game")
-    elif stat == "apg":
+    elif stat == "assits":
         plt.title("Assists per game")
     else:
         plt.title("Rebounds per game")
-
-    stats_dict = {
-    "ppg": "points",
-    "apg": "assists",
-    "rpg": "rebounds"
-    }
-
+    isExist = os.path.exists(stats_dir)
+    if not isExist:
+        # Create a new directory because it does not exist
+        os.makedirs(stats_dir)
     plt.tight_layout()
-    plt.savefig(stats_dir + "/" + stats_dict[stat] + ".png")
+    plt.savefig(stats_dir + "/" + stat + ".png")
     print("Finished plotting")
+
 def get_teams(url: str) -> list:
     """Extracts all the teams that were in the semi finals in nba
-
     arguments:
         - url (str) : url of the nba finals wikipedia page
     returns:
@@ -275,27 +265,25 @@ def get_players(team_url: str) -> list:
     html = get_html(team_url)
     soup = BeautifulSoup(html, "html.parser")
     table_head = soup.find(id = "Roster")
-    table = table_head.find_next("table")
+    table = table_head.find_next("table", {"class": "sortable"})
 
     players = []
     # Loop over every row and get the names from roster
     rows = table.find_all("tr")
+    rows = rows[1:]
     for row in rows:
         # Get the columns
         cols = row.find_all("td")
-        # find name links (a tags)s
+        cell = cols[2]
+        url = cell.find('a')["href"]
+        name = cell.getText().strip("\n")
+        # find name links (a tags)
         # and add to players a dict with
         # {'name':, 'url':}
-        col_text = [col.get_text(strip=True) for col in cols]
+        players.append({'name': name, 'url': base_url + url})
 
-        if len(col_text) == 7:
-            player_url = cols[2].find_next("a").attrs["href"]
-            player_name = re.findall(r".*[\/]([A-Za-z._]+)", player_url)[0]
-            player_name = re.sub("_", " ", player_name)
-            player_url = "wikipedia.org" + player_url
-            player_info = {"name": player_name, "url": player_url}
-            players.append(player_info)
     # return list of players
+
     return players
 
 
@@ -307,12 +295,12 @@ def get_player_stats(player_url: str, team: str) -> dict:
     returns:
         stats (dict) : dictionary with the keys (at least): points, assists, and rebounds keys
     """
-    print(f"Fetching stats for player in {player_url}")
+    #print(f"Fetching stats for player in {player_url}")
 
     stats = {
-    "ppg": 0.0,
-    "apg": 0.0,
-    "rpg": 0.0
+    "points": 0.0,
+    "assists": 0.0,
+    "rebounds": 0.0
     }
 
     # Get the table with stats
@@ -365,30 +353,30 @@ def get_player_stats(player_url: str, team: str) -> dict:
     rpg = rpgc.get_text(strip = True)
 
     try:
-        stats["ppg"] = float(ppg)
+        stats["points"] = float(ppg)
     except:
-        stats["ppg"] = 0.0
+        stats["points"] = 0.0
     try:
-        stats["apg"] = float(apg)
+        stats["assists"] = float(apg)
     except:
-        stats["apg"]  = 0.0
+        stats["assists"]  = 0.0
     try:
-        stats["rpg"] = float(rpg)
+        stats["rebounds"] = float(rpg)
     except:
-        stats["rpg"] = 0.0
+        stats["rebounds"] = 0.0
 
     return stats
 
 #helper functions to help sort lists of players by scores
 
 def sortPPG(e):
-    return e['ppg']
+    return e['points']
 
 def sortAPG(e):
-    return e['apg']
+    return e['assists']
 
 def sortRPG(e):
-    return e['rpg']
+    return e['rebounds']
 
 # run the whole thing if called as a script, for quick testing
 if __name__ == "__main__":

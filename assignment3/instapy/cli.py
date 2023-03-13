@@ -15,10 +15,11 @@ from instapy.numba_filters import numba_color2gray, numba_color2sepia
 
 def run_filter(
     file: str,
-    out_file: str = None,
     implementation: str = "python",
     filter: str = "color2gray",
     scale: int = 1,
+    out_file: str = None,
+
 ) -> None:
     """Run the selected filter"""
     # load the image from a file
@@ -59,10 +60,10 @@ def main(argv=None):
 
 
     # Add required arguments
-    parser.add_argument("-i", "--implementation", help="python, numpy or numba")
-    parser.add_argument("-f", "--filter", help="color2gray or color2sepia")
+    parser.add_argument("implementation", help="python, numpy or numba")
+    parser.add_argument("filter", help="color2gray or color2sepia")
     parser.add_argument("-sc", "--scale", help="Scale to resize your picture with")
 
     # parse arguments and call run_filter
     args = parser.parse_args()
-    run_filter(args.file, args.out, args.implementation, args.filter, args.scale)
+    run_filter(args.file, args.implementation, args.filter, args.scale, args.out)
